@@ -1,5 +1,5 @@
-FROM alpine:3.15
-ARG VERSION=1.17.0
+FROM alpine:3.23
+ARG VERSION=1.25.1
 
 # Inspiration from https://github.com/gmr/alpine-pgbouncer/blob/master/Dockerfile
 # hadolint ignore=DL3003,DL3018
@@ -28,7 +28,7 @@ RUN \
   apk del --purge autoconf autoconf-doc automake udns-dev curl gcc libc-dev libevent-dev libtool make libressl-dev pkgconfig
 COPY entrypoint.sh /entrypoint.sh
 # RUN chown -R postgres:postgres /entrypoint.sh
-run chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 # USER postgres
 EXPOSE 5432
 ENTRYPOINT ["/entrypoint.sh"]

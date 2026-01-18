@@ -47,14 +47,25 @@ if [ ! -e "${_AUTH_FILE}" ]; then
   touch "${_AUTH_FILE}"
 fi
 
-if [ -n "$DB_USER" -a -n "$DB_PASSWORD" -a -e "${_AUTH_FILE}" ] && ! grep -q "^\"$DB_USER\"" "${_AUTH_FILE}"; then
-  if [ "$AUTH_TYPE" != "plain" ]; then
-     pass="md5$(echo -n "$DB_PASSWORD$DB_USER" | md5sum | cut -f 1 -d ' ')"
+if [ -n "$DB_USER" -a -e "${_AUTH_FILE}" ] && ! grep -q "^\"$DB_USER\"" "${_AUTH_FILE}"; then
+  # Prefer an explicitly provided SCRAM secret if auth_type is SCRAM
+  if [ "$AUTH_TYPE" = "scram-sha-256" ] && [ -n "$PGBOUNCER_SCRAM_SECRET" ]; then
+    pass="$PGBOUNCER_SCRAM_SECRET"
+    echo "Using provided SCRAM secret for user $DB_USER"
+  elif [ -n "$DB_PASSWORD" ]; then
+    if [ "$AUTH_TYPE" != "plain" ]; then
+      # Default to md5 like before
+      pass="md5$(echo -n "$DB_PASSWORD$DB_USER" | md5sum | cut -f 1 -d ' ')"
+    else
+      pass="$DB_PASSWORD"
+    fi
   else
-     pass="$DB_PASSWORD"
+    echo "ERROR: No password or SCRAM secret provided for user $DB_USER" >&2
+    exit 1
   fi
-  echo "\"$DB_USER\" \"$pass\"" >> ${PG_CONFIG_DIR}/userlist.txt
-  echo "Wrote authentication credentials to ${PG_CONFIG_DIR}/userlist.txt"
+
+  echo "\"$DB_USER\" \"$pass\"" >> "${_AUTH_FILE}"
+  echo "Wrote authentication credentials to ${_AUTH_FILE}"
 fi
 
 if [ ! -f ${PG_CONFIG_DIR}/pgbouncer.ini ]; then

@@ -1,0 +1,28 @@
+name: Build pgbouncer and Push to Amazon ECR
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set date string for image tag
+        id: date
+        run: echo "DATE_TAG=$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+
+      - name: Build the Docker image
+        run: cd ./community-edition/services/pgbouncer/ && docker build --platform linux/amd64 -t pgbouncer:latest -t pgbouncer:$DATE_TAG .
+
+      - name: Push to ECR
+        id: ecr
+        uses: jwalton/gh-ecr-push@v1
+        with:
+          access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: eu-central-1
+          local-image: pgbouncer:latest
+          image: pgbouncer:latest, pgbouncer:$DATE_TAG
